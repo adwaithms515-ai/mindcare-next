@@ -28,6 +28,7 @@ export default function WellnessJournalModule({ userId, entries, onAddEntry }: W
   // Voice Recognition State
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const baseContentRef = useRef("");
 
   useEffect(() => {
     // Initialize Web Speech API
@@ -38,15 +39,15 @@ export default function WellnessJournalModule({ userId, entries, onAddEntry }: W
       recognitionRef.current.interimResults = true;
 
       recognitionRef.current.onresult = (event: any) => {
-        let currentTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          currentTranscript += event.results[i][0].transcript;
+        let sessionTranscript = "";
+        for (let i = 0; i < event.results.length; i++) {
+          sessionTranscript += event.results[i][0].transcript;
         }
-        setContent(prev => {
-          // simple logic to append, avoiding duplication if interim
-          const lastSpace = prev.lastIndexOf(" ");
-          return prev + (prev.length > 0 ? " " : "") + currentTranscript;
-        });
+        
+        // Reconstruct the text to prevent repeating interim results
+        const base = baseContentRef.current.trim();
+        const newContent = base ? `${base} ${sessionTranscript}` : sessionTranscript;
+        setContent(newContent);
       };
 
       recognitionRef.current.onerror = (event: any) => {
@@ -66,6 +67,7 @@ export default function WellnessJournalModule({ userId, entries, onAddEntry }: W
       setIsListening(false);
     } else {
       if (recognitionRef.current) {
+        baseContentRef.current = content; // Save text before recording starts
         recognitionRef.current.start();
         setIsListening(true);
       } else {
